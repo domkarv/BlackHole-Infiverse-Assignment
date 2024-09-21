@@ -7,7 +7,7 @@ export const getChatResponce = async ({
   prompt: string;
   history: Omit<Message, "id">[];
 }) => {
-  const response = await fetch("http://localhost:3000/chat", {
+  const response = await fetch("https://blackhole-backend.onrender.com/chat", {
     method: "POST",
     headers: {
       "Content-type": "application/json; charset=UTF-8",
