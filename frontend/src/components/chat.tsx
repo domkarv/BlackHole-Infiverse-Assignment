@@ -1,15 +1,11 @@
 import { ArrowUpIcon } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import Markdown from "react-markdown";
+import { getChatResponce } from "../actions/chat.actions";
 import { cn } from "../lib/utils";
+import { Message } from "../types/message";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
-import { ScrollArea } from "./ui/scroll-area";
-
-interface Message {
-  id: number;
-  text: string;
-  sender: "user" | "model";
-}
 
 export default function ChatbotPage() {
   const [input, setInput] = useState("");
@@ -26,63 +22,69 @@ export default function ChatbotPage() {
     scrollToBottom();
   }, [messages]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (input.trim()) {
+    const inputMsg = input.trim();
+
+    if (inputMsg) {
       const newMessage: Message = {
         id: Date.now(),
-        text: input.trim(),
-        sender: "user",
+        parts: [{ text: inputMsg }],
+        role: "user",
       };
 
       setMessages((prevMessages) => [...prevMessages, newMessage]);
 
+      const chatResponce = await getChatResponce({
+        prompt: inputMsg,
+        history: messages.map((message) => ({
+          role: message.role,
+          parts: message.parts,
+        })),
+      });
+
       setInput("");
 
-      // Simulate bot response
-      setTimeout(() => {
-        const botResponse: Message = {
-          id: Date.now(),
-          text: "This is a simulated bot response.",
-          sender: "model",
-        };
-        setMessages((prevMessages) => [...prevMessages, botResponse]);
-      }, 1000);
+      const botResponse: Message = {
+        id: Date.now(),
+        parts: [{ text: chatResponce }],
+        role: "model",
+      };
+
+      setMessages((prevMessages) => [...prevMessages, botResponse]);
     }
   };
 
   return (
-    <div className='flex flex-col h-screen max-w-5xl mx-auto py-6'>
-      <ScrollArea
-        className='flex-grow mb-6 p-4 border rounded-lg bg-white shadow-inner'
+    <div className='flex flex-col h-screen max-w-5xl mx-auto py-4'>
+      <div
+        className='flex-grow overflow-y-auto p-6 space-y-4'
         ref={scrollAreaRef}
       >
-        <div className='space-y-4'>
-          {messages.map((message) => (
+        {messages.map((message) => (
+          <div
+            key={message.id}
+            className={cn(
+              "flex",
+              message.role === "user" ? "justify-end" : "justify-start"
+            )}
+          >
             <div
-              key={message.id}
               className={cn(
-                "flex",
-                message.sender === "user" ? "justify-end" : "justify-start"
+                "inline-block p-3 rounded-2xl max-w-[80%]",
+                message.role === "user"
+                  ? "bg-primary text-white"
+                  : "bg-gray-200 text-gray-800"
               )}
             >
-              <div
-                className={cn(
-                  "inline-block p-3 rounded-2xl max-w-[80%]",
-                  message.sender === "user"
-                    ? "bg-primary text-white"
-                    : "bg-gray-200 text-gray-800"
-                )}
-              >
-                {message.text}
-              </div>
+              <Markdown>{message.parts[0].text}</Markdown>
             </div>
-          ))}
-        </div>
-      </ScrollArea>
+          </div>
+        ))}
+      </div>
 
-      <form onSubmit={handleSubmit} className='flex gap-2'>
+      <form onSubmit={handleSubmit} className='flex gap-2 p-2'>
         <Input
           type='text'
           value={input}
